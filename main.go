@@ -8,8 +8,10 @@ import (
 import "database/sql"
 import _ "github.com/go-sql-driver/mysql"
 
+var db *sql.DB
+
 func main() {
-	db := connectDb()
+	db = connectDb()
 
 	r := gin.Default()
 	r.GET("/ping", func(c *gin.Context) {
@@ -19,21 +21,25 @@ func main() {
 	})
 
 	r.POST("/user", func(context *gin.Context) {
-		var user UserCreateModel
-		if context.BindJSON(&user) == nil {
-			fmt.Println(user.Password)
-			fmt.Println(user.UserName)
-			passwordHash,_ := HashPassword(user.Password)
-			_,err := db.Exec("insert into users (UserName, PasswordHash) values('"+user.UserName+"',"+"'"+passwordHash+"')");
-			if err != nil {
-				context.JSON(400, Error {Message: err.Error()})
-			} else {
-				context.JSON(200,user);
-			}
-		}
+		PostUser(context)
 	})
 	r.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 	defer db.Close()
+}
+
+func PostUser(context *gin.Context) {
+	var user UserCreateModel
+	if context.BindJSON(&user) == nil {
+		fmt.Println(user.Password)
+		fmt.Println(user.UserName)
+		passwordHash,_ := HashPassword(user.Password)
+		_,err := db.Exec("insert into users (UserName, PasswordHash) values('"+user.UserName+"',"+"'"+passwordHash+"')");
+		if err != nil {
+			context.JSON(400, Error {Message: err.Error()})
+		} else {
+			context.JSON(200,user);
+		}
+	}
 }
 
 func HashPassword(password string) (string, error) {
@@ -57,6 +63,11 @@ func connectDb() *sql.DB {
 }
 
 type UserCreateModel struct {
+	UserName string
+	Password string
+}
+
+type UserLoginModel struct {
 	UserName string
 	Password string
 }
